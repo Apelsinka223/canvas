@@ -197,4 +197,39 @@ defmodule Canvas.Canvases do
   def change_history(%History{} = history, attrs \\ %{}) do
     History.changeset(history, attrs)
   end
+
+  def apply_drawing(field, drawing) do
+    drawing_field =
+      for x <- drawing.start_point.x..(drawing.start_point.x + drawing.width - 1),
+          y <- drawing.start_point.y..(drawing.start_point.y + drawing.height - 1) do
+        if x in [drawing.start_point.x, (drawing.start_point.x + drawing.width - 1)]
+           or y in [drawing.start_point.y, (drawing.start_point.y + drawing.height - 1)] do
+          {{x, y}, drawing[:outline_char] || drawing[:fill_char] || " "}
+        else
+          {{x, y}, drawing[:fill_char] || " "}
+        end
+      end
+
+
+    {updated_field, history} =
+      Enum.reduce(drawing_field, {field, []}, fn {k, v}, {updated_field, history} ->
+        current_char = field.body[k]
+        if current_char == v do
+          {updated_field, history}
+        else
+          body = updated_field.body
+
+          {
+            %{
+              body: put_in(body[k], v),
+              max_x: max(updated_field.max_x, elem(k, 0)),
+              max_y: max(updated_field.max_y, elem(k, 1))
+            },
+            [{k, {current_char, v}} | history]
+          }
+        end
+      end)
+
+    updated_field
+  end
 end
