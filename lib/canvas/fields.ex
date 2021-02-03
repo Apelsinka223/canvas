@@ -214,6 +214,7 @@ defmodule Canvas.Fields do
       end
     end)
   end
+
   def add_rectangle(_, _), do: {:error, :field_not_found}
 
   defp check_rectangle(%{outline_char: nil, fill_char: nil}), do: {:error, :invalid_rectangle}
@@ -243,10 +244,10 @@ defmodule Canvas.Fields do
 
           {
             %{
-              updated_field |
-              body: put_in(body[k], v),
-              width: max(updated_field.width || 0, elem(k, 0) + 1),
-              height: max(updated_field.height || 0, elem(k, 1) + 1)
+              updated_field
+              | body: put_in(body[k], v),
+                width: max(updated_field.width || 0, elem(k, 0) + 1),
+                height: max(updated_field.height || 0, elem(k, 1) + 1)
             },
             [{k, {current_char, v}} | history]
           }
@@ -259,7 +260,8 @@ defmodule Canvas.Fields do
   def add_flood_fill(%Field{} = field, drawing) do
     with start_point_char = field.body[{drawing.start_point.x, drawing.start_point.y}],
          false <- start_point_char == drawing.fill_char,
-         {updated_field, history} = apply_drawing_flood_fill_to_field(field, drawing, start_point_char),
+         {updated_field, history} =
+           apply_drawing_flood_fill_to_field(field, drawing, start_point_char),
          {:ok, _} <- update_field(field, Map.take(updated_field, [:body, :height, :width])),
          {:ok, _} <- create_history(%{changes: history, field_id: field.id}) do
       {:ok, field}
@@ -268,6 +270,7 @@ defmodule Canvas.Fields do
         {:ok, field}
     end
   end
+
   def add_flood_fill(_, _), do: {:error, :field_not_found}
 
   defp apply_drawing_flood_fill_to_field(field, drawing, start_point_char) do
@@ -281,7 +284,10 @@ defmodule Canvas.Fields do
       drawing,
       {drawing.start_point.x, drawing.start_point.y},
       start_point_char,
-      [{{drawing.start_point.x, drawing.start_point.y}, {body[{drawing.start_point.x, drawing.start_point.y}], drawing.fill_char}}],
+      [
+        {{drawing.start_point.x, drawing.start_point.y},
+         {body[{drawing.start_point.x, drawing.start_point.y}], drawing.fill_char}}
+      ],
       0,
       [{drawing.start_point.x, drawing.start_point.y}]
     )
@@ -360,8 +366,8 @@ defmodule Canvas.Fields do
   end
 
   def print(field) do
-    for y <- 0..field.height - 1,
-        x <- 0..field.width - 1 do
+    for y <- 0..(field.height - 1),
+        x <- 0..(field.width - 1) do
       if x == 0, do: IO.write("\n")
       IO.write(field.body[{x, y}] || " ")
     end

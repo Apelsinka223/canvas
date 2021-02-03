@@ -4,6 +4,7 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
   def equal?(nil, nil), do: true
   def equal?(nil, _), do: false
   def equal?(_, nil), do: false
+
   def equal?(value1, value2) do
     value1 =
       case Map.keys(value1) do
@@ -64,6 +65,7 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
   end
 
   def dump(body) when is_binary(body), do: {:ok, body}
+
   def dump(body) do
     case Map.keys(body) do
       [] ->
@@ -78,7 +80,7 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
     string =
       body
       |> Enum.map(fn {{x, y}, {old_char, new_char}} ->
-        "\"{#{x},#{y}}\": \"{#{old_char},#{new_char}}\""
+        "\"{#{x},#{y}}\": \"{#{old_char || "null"},#{new_char}}\""
       end)
       |> Enum.join(",")
 
@@ -92,10 +94,12 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
       with coord = String.trim_leading(coord, "{"),
            coord = String.trim_trailing(coord, "}"),
            [x, y] <- String.split(coord, ","),
+           {x, _} <- Integer.parse(x),
+           {y, _} <- Integer.parse(y),
            diff = String.trim_leading(diff, "{"),
            diff = String.trim_trailing(diff, "}"),
            [old_char, new_char] <- String.split(diff, ",") do
-        {:cont, [{{x, y}, {old_char, new_char}} | acc]}
+        {:cont, [{{x, y}, {decode_char(old_char), decode_char(new_char)}} | acc]}
       else
         _ ->
           {:halt, :error}
@@ -109,4 +113,7 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
         Map.new(list)
     end
   end
+
+  defp decode_char("null"), do: nil
+  defp decode_char(char), do: char
 end

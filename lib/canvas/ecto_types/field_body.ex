@@ -4,6 +4,7 @@ defmodule Canvas.EctoTypes.FieldBody do
   def equal?(nil, nil), do: true
   def equal?(nil, _), do: false
   def equal?(_, nil), do: false
+
   def equal?(value1, value2) do
     value1 =
       case Map.keys(value1) do
@@ -64,6 +65,7 @@ defmodule Canvas.EctoTypes.FieldBody do
   end
 
   def dump(body) when is_binary(body), do: {:ok, body}
+
   def dump(body) do
     case Map.keys(body) do
       [] ->
@@ -78,7 +80,7 @@ defmodule Canvas.EctoTypes.FieldBody do
     string =
       body
       |> Enum.map(fn {{x, y}, char} ->
-        "\"{#{x},#{y}}\": \"#{char}\""
+        "\"{#{x},#{y}}\": \"#{char || "null"}\""
       end)
       |> Enum.join(",")
 
@@ -86,14 +88,17 @@ defmodule Canvas.EctoTypes.FieldBody do
   end
 
   defp decode_body(%{} = body), do: body
+
   defp decode_body(body) do
     body
     |> Jason.decode!()
     |> Enum.reduce_while([], fn {coord, char}, acc ->
-     with coord = String.trim_leading(coord, "{"),
-          coord = String.trim_trailing(coord, "}"),
-          [x, y] <- String.split(coord, ",") do
-        {:cont, [{{x, y}, char} | acc]}
+      with coord = String.trim_leading(coord, "{"),
+           coord = String.trim_trailing(coord, "}"),
+           [x, y] <- String.split(coord, ","),
+           {x, _} <- Integer.parse(x),
+           {y, _} <- Integer.parse(y) do
+        {:cont, [{{x, y}, decode_char(char)} | acc]}
       else
         _ ->
           {:halt, :error}
@@ -107,4 +112,7 @@ defmodule Canvas.EctoTypes.FieldBody do
         Map.new(list)
     end
   end
+
+  defp decode_char("null"), do: nil
+  defp decode_char(char), do: char
 end

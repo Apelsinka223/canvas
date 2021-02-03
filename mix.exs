@@ -44,7 +44,8 @@ defmodule Canvas.MixProject do
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
       {:absinthe, "~> 1.5"},
-      {:absinthe_phoenix, "~> 2.0"}
+      {:absinthe_phoenix, "~> 2.0"},
+      {:ex_machina, "~> 2.5", only: :test}
     ]
   end
 

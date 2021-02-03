@@ -53,10 +53,13 @@ defmodule CanvasWeb.Schemas.Schema do
     field :id, non_null(:uuid)
     field :width, :positive_integer
     field :height, :positive_integer
+
     field :body, :json do
       resolve fn %{body: body}, _, _ ->
-        body = Enum.map(body, fn {{x, y}, v} -> {Jason.encode!(%{x: x, y: y}), v} end) |> Map.new()
-        Jason.encode(body) |> IO.inspect
+        body =
+          Enum.map(body, fn {{x, y}, v} -> {Jason.encode!(%{x: x, y: y}), v} end) |> Map.new()
+
+        Jason.encode(body) |> IO.inspect()
       end
     end
   end

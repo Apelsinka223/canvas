@@ -24,6 +24,7 @@ defmodule Canvas.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Canvas.DataCase
+      import Canvas.Factory
     end
   end
 

@@ -23,5 +23,6 @@ defmodule Canvas.Fields.History do
     history
     |> cast(attrs, @required_data_fields ++ @optional_data_fields)
     |> validate_required(@required_data_fields)
+    |> foreign_key_constraint(:field_id)
   end
 end
