@@ -5,7 +5,14 @@ defmodule CanvasWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/api", CanvasWeb do
+  scope "/api" do
     pipe_through :api
+
+    if Mix.env() == :dev do
+      forward "/graphiql", Absinthe.Plug.GraphiQL, schema: CanvasWeb.Schemas.Schema
+    end
+
+    get "/", Absinthe.Plug, schema: CanvasWeb.Schemas.Schema
+    post "/", Absinthe.Plug, schema: CanvasWeb.Schemas.Schema
   end
 end

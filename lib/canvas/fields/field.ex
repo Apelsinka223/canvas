@@ -22,7 +22,8 @@ defmodule Canvas.Fields.Field do
     field
     |> cast(attrs, @required_data_fields ++ @optional_data_fields)
     |> validate_required(@required_data_fields)
-    |> put_change(:size_fixed, not is_nil(attrs[:size]))
+    |> validate_required_size_attrs()
+    |> put_change(:size_fixed, not is_nil(attrs[:height]))
   end
 
   def update_changeset(field, attrs) do
@@ -30,14 +31,34 @@ defmodule Canvas.Fields.Field do
     |> cast(attrs, @required_data_fields ++ @optional_data_fields)
     |> validate_required(@required_data_fields)
     |> validate_size_change()
-    |> IO.inspect()
+  end
+
+  defp validate_required_size_attrs(changeset) do
+    if not is_nil(get_field(changeset, :height)) or not is_nil(get_field(changeset, :width)) do
+      validate_required(
+        changeset,
+        [:height, :width],
+        message: "height and width should be set together"
+      )
+    else
+      changeset
+    end
   end
 
   defp validate_size_change(changeset) do
-    if get_field(changeset, :size_fixed) and
-         (not is_nil(get_change(changeset, :height)) or
-            not is_nil(get_change(changeset, :width))) do
-      add_error(changeset, :size, "size of field with fixed size cannot be changed")
+    if get_field(changeset, :size_fixed) do
+      changeset =
+        if is_nil(get_change(changeset, :height)) do
+          add_error(changeset, :height, "height of field with fixed size cannot be changed")
+        else
+          changeset
+        end
+
+      if is_nil(get_change(changeset, :width)) do
+        add_error(changeset, :width, "width of field with fixed size cannot be changed")
+      else
+        changeset
+      end
     else
       changeset
     end

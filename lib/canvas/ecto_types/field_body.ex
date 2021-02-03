@@ -1,6 +1,9 @@
 defmodule Canvas.EctoTypes.FieldBody do
   def type, do: :map
 
+  def equal?(nil, nil), do: true
+  def equal?(nil, _), do: false
+  def equal?(_, nil), do: false
   def equal?(value1, value2) do
     value1 =
       case Map.keys(value1) do
@@ -32,7 +35,7 @@ defmodule Canvas.EctoTypes.FieldBody do
   def cast(body) do
     case Map.keys(body) do
       [] ->
-        %{}
+        {:ok, %{}}
 
       [k | _] when is_binary(k) ->
         {:ok, decode_body(body)}
@@ -60,13 +63,11 @@ defmodule Canvas.EctoTypes.FieldBody do
     {:ok, nil}
   end
 
+  def dump(body) when is_binary(body), do: {:ok, body}
   def dump(body) do
     case Map.keys(body) do
       [] ->
-        %{}
-
-      [k | _] when is_binary(k) ->
-        {:ok, body}
+        {:ok, %{}}
 
       _ ->
         {:ok, encode_body(body)}
@@ -74,22 +75,26 @@ defmodule Canvas.EctoTypes.FieldBody do
   end
 
   defp encode_body(body) do
-    body
-    |> Enum.map(fn {{x, y}, char} -> {"{#{x},#{y}}", char} end)
-    |> Map.new()
+    string =
+      body
+      |> Enum.map(fn {{x, y}, char} ->
+        "\"{#{x},#{y}}\": \"#{char}\""
+      end)
+      |> Enum.join(",")
+
+    "{#{string}}"
   end
 
+  defp decode_body(%{} = body), do: body
   defp decode_body(body) do
     body
-    |> Enum.reduce_while([], fn {k, v}, acc ->
-      k
-      |> String.trim_leading("{")
-      |> String.trim_trailing("}")
-      |> String.split(",")
-      |> case do
-        [x, y] ->
-          {:cont, [{{x, y}, v} | acc]}
-
+    |> Jason.decode!()
+    |> Enum.reduce_while([], fn {coord, char}, acc ->
+     with coord = String.trim_leading(coord, "{"),
+          coord = String.trim_trailing(coord, "}"),
+          [x, y] <- String.split(coord, ",") do
+        {:cont, [{{x, y}, char} | acc]}
+      else
         _ ->
           {:halt, :error}
       end
