@@ -5,7 +5,7 @@ defmodule Canvas.Fields.FieldTest do
   alias Canvas.Fields.Field
   alias Canvas.Repo
 
-  describe "create_field/2" do
+  describe "add_rectangle/2" do
     test "creates field" do
       assert {:ok, %{id: field_id}} =
                Fields.create_field(%{

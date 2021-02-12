@@ -42,6 +42,29 @@ defmodule Canvas.Schemas.CustomTypes do
     serialize & &1
   end
 
+  scalar :non_negative_integer, name: "NonNegativeInteger" do
+    description """
+    Integer >= 0
+    """
+
+    parse fn
+      %Absinthe.Blueprint.Input.Integer{value: value} ->
+        if value >= 0 do
+          {:ok, value}
+        else
+          :error
+        end
+
+      %Absinthe.Blueprint.Input.Null{} ->
+        {:ok, nil}
+
+      _ ->
+        :error
+    end
+
+    serialize & &1
+  end
+
   scalar :char, name: "Char" do
     parse fn
       %Absinthe.Blueprint.Input.String{value: <<value::bytes-size(1)>>} when is_binary(value) ->

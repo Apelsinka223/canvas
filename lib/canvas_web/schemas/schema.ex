@@ -16,10 +16,20 @@ defmodule CanvasWeb.Schemas.Schema do
   end
 
   query do
+    field :fields, list_of(:field) do
+      resolve &FieldsResolver.list_fields/2
+    end
+
     field :field, :field do
       arg :field_id, non_null(:uuid)
 
       resolve &FieldsResolver.field/2
+    end
+
+    field :print, :string do
+      arg :field_id, non_null(:uuid)
+
+      resolve &FieldsResolver.print/2
     end
   end
 
@@ -78,7 +88,7 @@ defmodule CanvasWeb.Schemas.Schema do
   end
 
   input_object :input_start_point do
-    field :x, non_null(:positive_integer)
-    field :y, non_null(:positive_integer)
+    field :x, non_null(:non_negative_integer)
+    field :y, non_null(:non_negative_integer)
   end
 end

@@ -1,0 +1,8 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# For correct example fixtures savings
+[test/canvas/drawing_test.exs]
+trim_trailing_whitespace = false

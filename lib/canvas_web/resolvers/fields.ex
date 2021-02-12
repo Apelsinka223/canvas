@@ -5,6 +5,10 @@ defmodule CanvasWeb.Resolvers.Fields do
     Fields.create_field(params)
   end
 
+  def list_fields(_, _) do
+    {:ok, Fields.list_fields()}
+  end
+
   def field(%{field_id: field_id}, _) do
     Fields.get_field(field_id)
   end
@@ -18,6 +22,12 @@ defmodule CanvasWeb.Resolvers.Fields do
   def add_flood_fill(%{field_id: field_id, flood_fill: flood_fill}, _) do
     with {:ok, field} <- Fields.get_field(field_id) do
       Fields.add_flood_fill(field, flood_fill)
+    end
+  end
+
+  def print(%{field_id: field_id}, _) do
+    with {:ok, field} <- Fields.get_field(field_id) do
+      {:ok, Fields.print(field)}
     end
   end
 end

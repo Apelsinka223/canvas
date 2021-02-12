@@ -4,9 +4,9 @@ defmodule Canvas.Fields do
   """
 
   import Ecto.Query, warn: false
-  alias Canvas.Repo
-
+  alias Canvas.{Repo, Drawing}
   alias Canvas.Fields.{Field, History}
+  alias Canvas.Drawing.{Rectangle, FloodFill}
 
   @type start_point :: %{
           required(:x) => pos_integer(),
@@ -200,11 +200,10 @@ defmodule Canvas.Fields do
     Repo.delete(history)
   end
 
-  def add_rectangle(%Field{} = field, object) do
+  def add_rectangle(%Field{} = field, rectangle) do
     Repo.transaction(fn ->
-      with :ok <- check_rectangle(object),
-           drawing = build_rectangle_drawing(object),
-           {updated_field, history} = apply_rectangle_to_field(field, drawing),
+      with {:ok, rectangle} <- Drawing.parse(rectangle, :rectangle) |> IO.inspect(),
+           {:ok, {updated_field, history}} <- Drawing.apply(rectangle, field),
            {:ok, _} <- update_field(field, Map.take(updated_field, [:body, :height, :width])),
            {:ok, _} <- create_history(%{changes: history, field_id: field.id}) do
         field
@@ -217,51 +216,11 @@ defmodule Canvas.Fields do
 
   def add_rectangle(_, _), do: {:error, :field_not_found}
 
-  defp check_rectangle(%{outline_char: nil, fill_char: nil}), do: {:error, :invalid_rectangle}
-  defp check_rectangle(_), do: :ok
-
-  defp build_rectangle_drawing(drawing) do
-    for x <- drawing.start_point.x..(drawing.start_point.x + drawing.width - 1),
-        y <- drawing.start_point.y..(drawing.start_point.y + drawing.height - 1) do
-      if x in [drawing.start_point.x, drawing.start_point.x + drawing.width - 1] or
-           y in [drawing.start_point.y, drawing.start_point.y + drawing.height - 1] do
-        {{x, y}, drawing[:outline_char] || drawing[:fill_char] || " "}
-      else
-        {{x, y}, drawing[:fill_char] || " "}
-      end
-    end
-  end
-
-  defp apply_rectangle_to_field(field, drawing) do
-    {updated_field, history} =
-      Enum.reduce(drawing, {field, []}, fn {k, v}, {updated_field, history} ->
-        current_char = field.body[k]
-
-        if current_char == v do
-          {updated_field, history}
-        else
-          body = updated_field.body
-
-          {
-            %{
-              updated_field
-              | body: put_in(body[k], v),
-                width: max(updated_field.width || 0, elem(k, 0) + 1),
-                height: max(updated_field.height || 0, elem(k, 1) + 1)
-            },
-            [{k, {current_char, v}} | history]
-          }
-        end
-      end)
-
-    {updated_field, Map.new(history)}
-  end
-
-  def add_flood_fill(%Field{} = field, drawing) do
-    with start_point_char = field.body[{drawing.start_point.x, drawing.start_point.y}],
-         false <- start_point_char == drawing.fill_char,
-         {updated_field, history} =
-           apply_drawing_flood_fill_to_field(field, drawing, start_point_char),
+  def add_flood_fill(%Field{} = field, flood_fill) do
+    with start_point_char = field.body[{flood_fill.start_point.x, flood_fill.start_point.y}],
+         false <- start_point_char == flood_fill.fill_char,
+         {:ok, flood_fill} <- Drawing.parse(flood_fill, :flood_fill),
+         {:ok, {updated_field, history}} <- Drawing.apply(flood_fill, field),
          {:ok, _} <- update_field(field, Map.take(updated_field, [:body, :height, :width])),
          {:ok, _} <- create_history(%{changes: history, field_id: field.id}) do
       {:ok, field}
@@ -368,8 +327,9 @@ defmodule Canvas.Fields do
   def print(field) do
     for y <- 0..(field.height - 1),
         x <- 0..(field.width - 1) do
-      if x == 0, do: IO.write("\n")
-      IO.write(field.body[{x, y}] || " ")
+      if x == 0, do: "\n"
+      field.body[{x, y}] || " "
     end
+    |> Enum.join()
   end
 end

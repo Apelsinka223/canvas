@@ -22,7 +22,6 @@ defmodule CanvasWeb do
       use Phoenix.Controller, namespace: CanvasWeb
 
       import Plug.Conn
-      import CanvasWeb.Gettext
       alias CanvasWeb.Router.Helpers, as: Routes
     end
   end
@@ -64,7 +63,6 @@ defmodule CanvasWeb do
       import Phoenix.View
 
       import CanvasWeb.ErrorHelpers
-      import CanvasWeb.Gettext
       alias CanvasWeb.Router.Helpers, as: Routes
     end
   end
