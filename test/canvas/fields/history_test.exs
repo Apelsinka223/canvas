@@ -55,5 +55,37 @@ defmodule Canvas.Fields.HistoryTest do
 
       assert Repo.aggregate(History, :count, :id) == 0
     end
+
+    test "with invalid changes, return error", %{field: field} do
+      assert {:error, changeset} =
+               Fields.create_history(%{
+                 field_id: field.id,
+                 changes: %{{0, 0} => {"asd", "a"}}
+               })
+
+      assert errors_on(changeset) == %{changes: ["is invalid"]}
+
+      assert {:ok, _} =
+               Fields.create_history(%{
+                 field_id: field.id,
+                 changes: %{{0, 0} => {nil, "a"}}
+               })
+
+      assert {:error, changeset} =
+               Fields.create_history(%{
+                 field_id: field.id,
+                 changes: %{{-1, 0} => {"a", "z"}}
+               })
+
+      assert errors_on(changeset) == %{changes: ["is invalid"]}
+
+      assert {:error, changeset} =
+               Fields.create_history(%{
+                 field_id: field.id,
+                 changes: %{{0, -1} => {"a", "x"}}
+               })
+
+      assert errors_on(changeset) == %{changes: ["is invalid"]}
+    end
   end
 end

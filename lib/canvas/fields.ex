@@ -202,7 +202,7 @@ defmodule Canvas.Fields do
 
   def add_rectangle(%Field{} = field, rectangle) do
     Repo.transaction(fn ->
-      with {:ok, rectangle} <- Drawing.parse(rectangle, :rectangle) |> IO.inspect(),
+      with {:ok, rectangle} <- Drawing.parse(rectangle, :rectangle),
            {:ok, {updated_field, history}} <- Drawing.apply(rectangle, field),
            {:ok, _} <- update_field(field, Map.take(updated_field, [:body, :height, :width])),
            {:ok, _} <- create_history(%{changes: history, field_id: field.id}) do
@@ -217,21 +217,27 @@ defmodule Canvas.Fields do
   def add_rectangle(_, _), do: {:error, :field_not_found}
 
   def add_flood_fill(%Field{} = field, flood_fill) do
-    with start_point_char = field.body[{flood_fill.start_point.x, flood_fill.start_point.y}],
-         false <- start_point_char == flood_fill.fill_char,
-         {:ok, flood_fill} <- Drawing.parse(flood_fill, :flood_fill),
-         {:ok, {updated_field, history}} <- Drawing.apply(flood_fill, field),
-         {:ok, _} <- update_field(field, Map.take(updated_field, [:body, :height, :width])),
-         {:ok, _} <- create_history(%{changes: history, field_id: field.id}) do
-      {:ok, field}
-    else
-      true ->
-        {:ok, field}
-    end
+    Repo.transaction(fn ->
+      with start_point_char = field.body[{flood_fill.start_point.x, flood_fill.start_point.y}],
+           false <- start_point_char == flood_fill.fill_char,
+           {:ok, flood_fill} <- Drawing.parse(flood_fill, :flood_fill),
+           {:ok, {updated_field, history}} <- Drawing.apply(flood_fill, field),
+           {:ok, _} <- update_field(field, Map.take(updated_field, [:body, :height, :width])),
+           {:ok, _} <- create_history(%{changes: history, field_id: field.id}) do
+        field
+      else
+        true ->
+          field
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
   end
 
   def add_flood_fill(_, _), do: {:error, :field_not_found}
 
+  @spec
   defp apply_drawing_flood_fill_to_field(field, drawing, start_point_char) do
     body = field.body
 
@@ -326,10 +332,10 @@ defmodule Canvas.Fields do
 
   def print(field) do
     for y <- 0..(field.height - 1),
-        x <- 0..(field.width - 1) do
-      if x == 0, do: "\n"
-      field.body[{x, y}] || " "
+        x <- 0..(field.width - 1),
+        reduce: "" do
+      acc ->
+        acc <> (if x == 0 and y != 0, do: "\n", else: "") <> (field.body[{x, y}] || " ")
     end
-    |> Enum.join()
   end
 end

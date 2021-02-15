@@ -33,23 +33,33 @@ defmodule Canvas.EctoTypes.FieldBody do
     value1 == value2
   end
 
-  def cast(body) do
-    case Map.keys(body) do
-      [] ->
-        {:ok, %{}}
-
-      [k | _] when is_binary(k) ->
-        {:ok, decode_body(body)}
+  def cast(body) when is_map(body) do
+    body
+    |> Enum.all?(fn
+      {{x, y}, <<_::bytes-size(1)>>} when is_integer(x) and x >= 0 and is_integer(y) and y >= 0 ->
+         true
 
       _ ->
-        {:ok, body}
+        false
+    end)
+    |> if do
+      {:ok, body}
+    else
+      :error
     end
   end
+  def cast(body) when is_binary(body), do: {:ok, body}
+  def cast(body) do
+    case decode_body(body) do
+      :error ->
+        :error
 
-  def load(nil) do
-    {:ok, nil}
+      body ->
+        {:ok, body}
+    end |> IO.inspect
   end
 
+  def load(nil), do: {:ok, nil}
   def load(body) do
     case decode_body(body) do
       :error ->
@@ -60,19 +70,16 @@ defmodule Canvas.EctoTypes.FieldBody do
     end
   end
 
-  def dump(nil) do
-    {:ok, nil}
-  end
-
+  def dump(nil), do: {:ok, nil}
   def dump(body) when is_binary(body), do: {:ok, body}
-
+  def dump(body) when is_map(body) and map_size(body) == 0, do: {:ok, body}
   def dump(body) do
-    case Map.keys(body) do
-      [] ->
-        {:ok, %{}}
+    case encode_body(body) do
+      :error ->
+        :error
 
-      _ ->
-        {:ok, encode_body(body)}
+      body ->
+        {:ok, body}
     end
   end
 
@@ -92,17 +99,21 @@ defmodule Canvas.EctoTypes.FieldBody do
   defp decode_body(body) do
     body
     |> Jason.decode!()
-    |> Enum.reduce_while([], fn {coord, char}, acc ->
-      with coord = String.trim_leading(coord, "{"),
-           coord = String.trim_trailing(coord, "}"),
-           [x, y] <- String.split(coord, ","),
-           {x, _} <- Integer.parse(x),
-           {y, _} <- Integer.parse(y) do
-        {:cont, [{{x, y}, decode_char(char)} | acc]}
-      else
-        _ ->
-          {:halt, :error}
-      end
+    |> Enum.reduce_while([], fn
+         {coord, <<_::bytes-size(1)>> = char}, acc ->
+           with coord = String.trim_leading(coord, "{"),
+                coord = String.trim_trailing(coord, "}"),
+                [x, y] <- String.split(coord, ","),
+                {x, _} <- Integer.parse(x),
+                {y, _} <- Integer.parse(y) do
+             {:cont, [{{x, y}, decode_char(char)} | acc]}
+           else
+             _ ->
+               {:halt, :error}
+           end
+
+         _, _ ->
+           {:halt, :error}
     end)
     |> case do
       :error ->

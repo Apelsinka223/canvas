@@ -4,5 +4,6 @@
 root = true
 
 # For correct example fixtures savings
-[test/canvas/drawing_test.exs]
+[test/canvas/fixtures/*.txt]
 trim_trailing_whitespace = false
+insert_final_newline = false
