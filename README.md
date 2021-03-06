@@ -13,7 +13,7 @@ To start server:
 
 ## Interface
 
-You can use graphiql console to work with application.
+You can use graphiql console to work with application.  
 Open [`localhost:4000/api/graphiql`](localhost:4000/api/graphiql) from your browser.
 
 ## Commands
@@ -26,7 +26,7 @@ mutation {
   }
 }
 ```
-You can pass width and height or not. If size params not passed, field would be flexible. Otherwise, field would have fixed size.
+You can pass width and height or not. If size params not passed, field would be flexible. Otherwise, field would have fixed size.  
 Width and height have type PositiveInt, which mean that they should be > 0.
 
 2. Add a rectangle to the field
@@ -62,7 +62,7 @@ mutation($field_id: ID!) {
 }
 ```
 
-4. Print the field in a browser.
+4. Print the field in a browser.  
 Since the field body has a special format that is hard to perceive, you can print field in a browser.
    
 Open `http://localhost:4000/print/<field_id>`
