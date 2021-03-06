@@ -111,7 +111,7 @@ defmodule Canvas.Drawing.RectangleTest do
                    width: 10,
                    height: 20,
                    body: %{{0, 0} => "x", {0, 1} => "x"},
-                   size_fixed: true,
+                   size_fixed: true
                  },
                  %{{0, 0} => {nil, "x"}, {0, 1} => {nil, "x"}}
                }
@@ -119,46 +119,55 @@ defmodule Canvas.Drawing.RectangleTest do
     end
 
     test "fill field with different outline and fill chars" do
-      assert {
-               :ok,
+      assert Drawing.apply(
+               %Rectangle{@valid_rectangle | width: 3, height: 3},
+               @valid_field
+             ) ==
                {
-                 %Field{
-                   width: 10,
-                   height: 20,
-                   body: %{
-                     {0, 0} => "x",
-                     {0, 1} => "x",
-                     {1, 0} => "x",
-                     {1, 1} => "-",
-                     {1, 2} => "x",
-                     {2, 0} => "x",
-                     {2, 1} => "x",
-                     {2, 2} => "x",
+                 :ok,
+                 {
+                   %Field{
+                     width: 10,
+                     height: 20,
+                     size_fixed: true,
+                     body: %{
+                       {0, 0} => "x",
+                       {0, 1} => "x",
+                       {0, 2} => "x",
+                       {1, 0} => "x",
+                       {1, 1} => "-",
+                       {1, 2} => "x",
+                       {2, 0} => "x",
+                       {2, 1} => "x",
+                       {2, 2} => "x"
+                     }
+                   },
+                   %{
+                     {0, 0} => {nil, "x"},
+                     {0, 1} => {nil, "x"},
+                     {0, 2} => {nil, "x"},
+                     {1, 0} => {nil, "x"},
+                     {1, 1} => {nil, "-"},
+                     {1, 2} => {nil, "x"},
+                     {2, 0} => {nil, "x"},
+                     {2, 1} => {nil, "x"},
+                     {2, 2} => {nil, "x"}
                    }
-                 },
-                 %{
-                   {0, 0} => {nil, "x"},
-                   {0, 1} => {nil, "x"},
-                   {0, 2} => {nil, "x"},
-                   {1, 0} => {nil, "x"},
-                   {1, 1} => {nil, "-"},
-                   {1, 2} => {nil, "x"},
-                   {2, 0} => {nil, "x"},
-                   {2, 1} => {nil, "x"},
-                   {2, 2} => {nil, "x"},
                  }
                }
-             } = Drawing.apply(
-               %Rectangle{@valid_rectangle | width: 3, height: 3}, @valid_field)
     end
 
     test "with different start_point" do
-      assert {
+      assert Drawing.apply(
+               %Rectangle{@valid_rectangle | width: 3, height: 3, start_point: %{x: 3, y: 3}},
+               @valid_field
+             ) == {
                :ok,
                {
                  %Field{
                    width: 10,
                    height: 20,
+                   size_fixed: true,
                    body: %{
                      {3, 3} => "x",
                      {3, 4} => "x",
@@ -168,7 +177,7 @@ defmodule Canvas.Drawing.RectangleTest do
                      {4, 5} => "x",
                      {5, 3} => "x",
                      {5, 4} => "x",
-                     {5, 5} => "x",
+                     {5, 5} => "x"
                    }
                  },
                  %{
@@ -180,13 +189,109 @@ defmodule Canvas.Drawing.RectangleTest do
                    {4, 5} => {nil, "x"},
                    {5, 3} => {nil, "x"},
                    {5, 4} => {nil, "x"},
-                   {5, 5} => {nil, "x"},
+                   {5, 5} => {nil, "x"}
                  }
                }
-             } = Drawing.apply(
-               %Rectangle{@valid_rectangle | width: 3, height: 3, start_point: %{x: 3, y: 3}},
-               @valid_field
-             )
+             }
+    end
+
+    test "when field is empty and size_fixed=false" do
+      assert Drawing.apply(@valid_rectangle, @valid_field) ==
+               {
+                 :ok,
+                 {
+                   %Field{
+                     width: 10,
+                     height: 20,
+                     size_fixed: true,
+                     body: %{
+                       {0, 0} => "x",
+                       {0, 1} => "x"
+                     }
+                   },
+                   %{
+                     {0, 0} => {nil, "x"},
+                     {0, 1} => {nil, "x"}
+                   }
+                 }
+               }
+    end
+
+    test "when field is empty and size_fixed=true" do
+      assert Drawing.apply(@valid_rectangle, @valid_field) ==
+               {
+                 :ok,
+                 {
+                   %Field{
+                     width: 10,
+                     height: 20,
+                     body: %{
+                       {0, 0} => "x",
+                       {0, 1} => "x"
+                     },
+                     size_fixed: true
+                   },
+                   %{
+                     {0, 0} => {nil, "x"},
+                     {0, 1} => {nil, "x"}
+                   }
+                 }
+               }
+    end
+
+    test "when field has size_fixed=false and start_point is out of field size" do
+      assert Drawing.apply(
+               %Rectangle{@valid_rectangle | start_point: %{x: 1, y: 1}},
+               %Field{
+                 width: 1,
+                 height: 1,
+                 body: %{},
+                 size_fixed: false
+               }
+             ) == {
+               :ok,
+               {
+                 %Field{
+                   body: %{
+                     {1, 1} => "x",
+                     {1, 2} => "x"
+                   },
+                   height: 3,
+                   size_fixed: false,
+                   width: 2
+                 },
+                 %{
+                   {1, 1} => {nil, "x"},
+                   {1, 2} => {nil, "x"}
+                 }
+               }
+             }
+    end
+
+    test "when field has size_fixed=true and start_point is out of field size, return error" do
+      assert {:error, :out_of_range} =
+               Drawing.apply(
+                 %Rectangle{@valid_rectangle | start_point: %{x: 1, y: 1}},
+                 %Field{
+                   width: 1,
+                   height: 1,
+                   body: %{},
+                   size_fixed: true
+                 }
+               )
+    end
+
+    test "when field has size_fixed=true and rectangle shape is out of field size, return error" do
+      assert {:error, :out_of_range} =
+               Drawing.apply(
+                 @valid_rectangle,
+                 %Field{
+                   width: 1,
+                   height: 1,
+                   body: %{},
+                   size_fixed: true
+                 }
+               )
     end
 
     test "when field is prefilled with flood_fill" do
@@ -220,7 +325,7 @@ defmodule Canvas.Drawing.RectangleTest do
                    {4, 1} => "a",
                    {4, 2} => "a",
                    {4, 3} => "a",
-                   {4, 4} => "a",
+                   {4, 4} => "a"
                  },
                  size_fixed: true
                }
@@ -255,7 +360,7 @@ defmodule Canvas.Drawing.RectangleTest do
                      {4, 1} => "a",
                      {4, 2} => "a",
                      {4, 3} => "a",
-                     {4, 4} => "a",
+                     {4, 4} => "a"
                    },
                    size_fixed: true
                  },
@@ -268,17 +373,17 @@ defmodule Canvas.Drawing.RectangleTest do
                    {1, 2} => {"a", "x"},
                    {2, 0} => {"a", "x"},
                    {2, 1} => {"a", "x"},
-                   {2, 2} => {"a", "x"},
+                   {2, 2} => {"a", "x"}
                  }
-               },
+               }
              }
     end
 
-    #.....
-    #.....
-    #..aaa
-    #..aaa
-    #..aaa
+    # .....
+    # .....
+    # ..aaa
+    # ..aaa
+    # ..aaa
     test "when field is prefilled with rectangle" do
       assert Drawing.apply(
                %Rectangle{@valid_rectangle | width: 3, height: 3},
@@ -310,7 +415,7 @@ defmodule Canvas.Drawing.RectangleTest do
                    {4, 1} => ".",
                    {4, 2} => "a",
                    {4, 3} => "a",
-                   {4, 4} => "a",
+                   {4, 4} => "a"
                  },
                  size_fixed: true
                }
@@ -345,7 +450,7 @@ defmodule Canvas.Drawing.RectangleTest do
                      {4, 1} => ".",
                      {4, 2} => "a",
                      {4, 3} => "a",
-                     {4, 4} => "a",
+                     {4, 4} => "a"
                    },
                    size_fixed: true
                  },
@@ -358,7 +463,7 @@ defmodule Canvas.Drawing.RectangleTest do
                    {1, 2} => {".", "x"},
                    {2, 0} => {".", "x"},
                    {2, 1} => {".", "x"},
-                   {2, 2} => {"a", "x"},
+                   {2, 2} => {"a", "x"}
                  }
                }
              }
@@ -371,7 +476,7 @@ defmodule Canvas.Drawing.RectangleTest do
                  width: nil,
                  height: nil,
                  body: %{},
-                 size_fixed: false,
+                 size_fixed: false
                }
              ) == {
                :ok,
@@ -380,7 +485,7 @@ defmodule Canvas.Drawing.RectangleTest do
                    width: 1,
                    height: 2,
                    body: %{{0, 0} => "x", {0, 1} => "x"},
-                   size_fixed: false,
+                   size_fixed: false
                  },
                  %{{0, 0} => {nil, "x"}, {0, 1} => {nil, "x"}}
                }
@@ -394,7 +499,7 @@ defmodule Canvas.Drawing.RectangleTest do
                  width: 1,
                  height: 1,
                  body: %{{0, 0} => "."},
-                 size_fixed: false,
+                 size_fixed: false
                }
              ) == {
                :ok,
@@ -403,7 +508,7 @@ defmodule Canvas.Drawing.RectangleTest do
                    width: 1,
                    height: 2,
                    body: %{{0, 0} => "x", {0, 1} => "x"},
-                   size_fixed: false,
+                   size_fixed: false
                  },
                  %{{0, 0} => {".", "x"}, {0, 1} => {nil, "x"}}
                }
@@ -417,7 +522,7 @@ defmodule Canvas.Drawing.RectangleTest do
                  width: nil,
                  height: nil,
                  body: %{},
-                 size_fixed: false,
+                 size_fixed: false
                }
              ) == {
                :ok,
@@ -426,7 +531,7 @@ defmodule Canvas.Drawing.RectangleTest do
                    width: 2,
                    height: 3,
                    body: %{{1, 1} => "x", {1, 2} => "x"},
-                   size_fixed: false,
+                   size_fixed: false
                  },
                  %{{1, 1} => {nil, "x"}, {1, 2} => {nil, "x"}}
                }

@@ -27,6 +27,6 @@ defmodule CanvasWeb.Router do
   scope "/" do
     pipe_through :browser
 
-    get "/print/:field_id", CanvasWeb.Controller, :print
+    get "/print/:field_id", CanvasWeb.Controllers.Print, :print
   end
 end

@@ -4,21 +4,32 @@ defmodule Canvas.Drawing.Rectangle do
   """
 
   import Ecto.Query, warn: false
-  alias Canvas.{Repo, Drawing}
+  alias Canvas.Drawing
   alias Canvas.Drawing.Coordinate
 
   @type t :: %__MODULE__{
           start_point: Coordinate.t(),
           width: pos_integer(),
           height: pos_integer(),
-          outline_char: string(),
-          fill_char: string()
+          outline_char: String.t(),
+          fill_char: String.t()
         }
 
   defstruct [:start_point, :width, :height, :outline_char, :fill_char]
 
   defimpl Drawing do
     def parse(_, _), do: {:error, :invalid_drawing}
+
+    def apply(%{start_point: %{x: x, y: y}}, %{size_fixed: true, width: width, height: height})
+        when width <= x or height <= y,
+        do: {:error, :out_of_range}
+
+    def apply(
+          %{start_point: %{x: x, y: y}, width: rectangle_width, height: rectangle_height},
+          %{size_fixed: true, width: field_width, height: field_height}
+        )
+        when field_width <= x + rectangle_width or field_height <= y + rectangle_height,
+        do: {:error, :out_of_range}
 
     def apply(rectangle, field) do
       {:ok, apply_rectangle_to_field(field, rectangle)}
@@ -50,7 +61,7 @@ defmodule Canvas.Drawing.Rectangle do
                 [{k, {current_char, v}} | history]
               }
             end
-          end)
+        end)
 
       {updated_field, Map.new(history)}
     end

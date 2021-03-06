@@ -37,9 +37,9 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
     body
     |> Enum.all?(fn
       {{x, y}, {old_v, new_v}}
-        when is_integer(x) and x >= 0 and is_integer(y) and y >= 0 ->
-          (match?(<<_::bytes-size(1)>>, old_v) or is_nil(old_v))
-          and (match?(<<_::bytes-size(1)>>, new_v) or is_nil(new_v))
+      when is_integer(x) and x >= 0 and is_integer(y) and y >= 0 ->
+        (match?(<<_::bytes-size(1)>>, old_v) or is_nil(old_v)) and
+          (match?(<<_::bytes-size(1)>>, new_v) or is_nil(new_v))
 
       _ ->
         false
@@ -50,7 +50,9 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
       :error
     end
   end
-  def cast(body) when is_binary(body), do: {:ok, body} |> IO.inspect
+
+  def cast(body) when is_binary(body), do: {:ok, body}
+
   def cast(body) do
     case decode_body(body) do
       :error ->
@@ -58,10 +60,11 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
 
       body ->
         {:ok, body}
-    end |> IO.inspect
+    end
   end
 
   def load(nil), do: {:ok, nil}
+
   def load(body) do
     case decode_body(body) do
       :error ->
@@ -75,6 +78,7 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
   def dump(nil), do: {:ok, nil}
   def dump(body) when is_binary(body), do: {:ok, body}
   def dump(body) when is_map(body) and map_size(body) == 0, do: {:ok, body}
+
   def dump(body) do
     case encode_body(body) do
       :error ->

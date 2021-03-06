@@ -57,6 +57,34 @@ defmodule CanvasWeb.Schemas.Schema do
   end
 
   subscription do
+    field :field_updated, :field do
+      arg :field_id, :id
+
+      config fn
+        %{field_id: field_id}, _ ->
+          {:ok, topic: "field_#{field_id}"}
+
+        _, _ ->
+          {:ok, topic: "fields"}
+      end
+
+      trigger [:add_rectangle, :add_flood_fill],
+        topic: fn
+          %{id: field_id} -> ["field_#{field_id}", "fields"]
+          _ -> []
+        end
+    end
+
+    field :field_created, :field do
+      config fn _ ->
+        {:ok, topic: "fields"}
+      end
+
+      trigger [:create_field],
+        topic: fn
+          _ -> ["fields"]
+        end
+    end
   end
 
   object :field do
@@ -67,9 +95,13 @@ defmodule CanvasWeb.Schemas.Schema do
     field :body, :json do
       resolve fn %{body: body}, _, _ ->
         body =
-          Enum.map(body, fn {{x, y}, v} -> {Jason.encode!(%{x: x, y: y}), v} end) |> Map.new()
+          body
+          |> Enum.map(fn {{x, y}, char} ->
+            {"#{x},#{y}", char}
+          end)
+          |> Map.new()
 
-        Jason.encode(body) |> IO.inspect()
+        Jason.encode(body)
       end
     end
   end

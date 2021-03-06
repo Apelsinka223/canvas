@@ -4,18 +4,26 @@ defmodule Canvas.Drawing.FloodFill do
   """
 
   import Ecto.Query, warn: false
-  alias Canvas.{Repo, Drawing}
+  alias Canvas.Drawing
   alias Canvas.Drawing.Coordinate
 
   @type t :: %__MODULE__{
           start_point: Coordinate.t(),
-          fill_char: string()
+          fill_char: String.t()
         }
 
   defstruct [:start_point, :fill_char]
 
   defimpl Drawing do
     def parse(_, _), do: {:error, :invalid_drawing}
+
+    def apply(_flood_fill, %{body: body, size_fixed: false})
+        when map_size(body) == 0,
+        do: {:error, :out_of_range}
+
+    def apply(%{start_point: %{x: x, y: y}}, %{width: width, height: height})
+        when width <= x or height <= y,
+        do: {:error, :out_of_range}
 
     def apply(flood_fill, field) do
       {:ok, apply_flood_fill_to_field(field, flood_fill)}

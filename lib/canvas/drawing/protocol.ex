@@ -40,6 +40,8 @@ defimpl Canvas.Drawing, for: Map do
   end
 
   def parse(_, _), do: {:error, :invalid_drawing}
+
+  def apply(_, _), do: {:error, :invalid_drawing}
 end
 
 defimpl Canvas.Drawing, for: Any do

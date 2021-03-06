@@ -23,6 +23,8 @@ defmodule CanvasWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import CanvasWeb.ConnCase
+      import Canvas.Factory
+      import CanvasWeb.AbsintheHelpers
 
       alias CanvasWeb.Router.Helpers, as: Routes
 
@@ -38,6 +40,6 @@ defmodule CanvasWeb.ConnCase do
       Ecto.Adapters.SQL.Sandbox.mode(Canvas.Repo, {:shared, self()})
     end
 
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+    {:ok, conn: Phoenix.ConnTest.build_conn(:get, "/api", nil)}
   end
 end

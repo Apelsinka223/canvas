@@ -5,7 +5,8 @@ defmodule Canvas.Factory do
 
   def field_factory do
     %Field{
-      body: %{}
+      body: %{},
+      size_fixed: false
     }
   end
 end

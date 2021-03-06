@@ -37,7 +37,7 @@ defmodule Canvas.EctoTypes.FieldBody do
     body
     |> Enum.all?(fn
       {{x, y}, <<_::bytes-size(1)>>} when is_integer(x) and x >= 0 and is_integer(y) and y >= 0 ->
-         true
+        true
 
       _ ->
         false
@@ -48,7 +48,9 @@ defmodule Canvas.EctoTypes.FieldBody do
       :error
     end
   end
+
   def cast(body) when is_binary(body), do: {:ok, body}
+
   def cast(body) do
     case decode_body(body) do
       :error ->
@@ -56,10 +58,11 @@ defmodule Canvas.EctoTypes.FieldBody do
 
       body ->
         {:ok, body}
-    end |> IO.inspect
+    end
   end
 
   def load(nil), do: {:ok, nil}
+
   def load(body) do
     case decode_body(body) do
       :error ->
@@ -73,6 +76,7 @@ defmodule Canvas.EctoTypes.FieldBody do
   def dump(nil), do: {:ok, nil}
   def dump(body) when is_binary(body), do: {:ok, body}
   def dump(body) when is_map(body) and map_size(body) == 0, do: {:ok, body}
+
   def dump(body) do
     case encode_body(body) do
       :error ->
@@ -95,25 +99,26 @@ defmodule Canvas.EctoTypes.FieldBody do
   end
 
   defp decode_body(%{} = body), do: body
+  defp decode_body("\"{}\""), do: {:ok, %{}}
 
   defp decode_body(body) do
     body
     |> Jason.decode!()
     |> Enum.reduce_while([], fn
-         {coord, <<_::bytes-size(1)>> = char}, acc ->
-           with coord = String.trim_leading(coord, "{"),
-                coord = String.trim_trailing(coord, "}"),
-                [x, y] <- String.split(coord, ","),
-                {x, _} <- Integer.parse(x),
-                {y, _} <- Integer.parse(y) do
-             {:cont, [{{x, y}, decode_char(char)} | acc]}
-           else
-             _ ->
-               {:halt, :error}
-           end
+      {coord, <<_::bytes-size(1)>> = char}, acc ->
+        with coord = String.trim_leading(coord, "{"),
+             coord = String.trim_trailing(coord, "}"),
+             [x, y] <- String.split(coord, ","),
+             {x, _} <- Integer.parse(x),
+             {y, _} <- Integer.parse(y) do
+          {:cont, [{{x, y}, decode_char(char)} | acc]}
+        else
+          _ ->
+            {:halt, :error}
+        end
 
-         _, _ ->
-           {:halt, :error}
+      _, _ ->
+        {:halt, :error}
     end)
     |> case do
       :error ->

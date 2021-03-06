@@ -6,7 +6,6 @@ defmodule Canvas.Fields do
   import Ecto.Query, warn: false
   alias Canvas.{Repo, Drawing}
   alias Canvas.Fields.{Field, History}
-  alias Canvas.Drawing.{Rectangle, FloodFill}
 
   @type start_point :: %{
           required(:x) => pos_integer(),
@@ -17,13 +16,13 @@ defmodule Canvas.Fields do
           required(:start_point) => start_point(),
           required(:width) => pos_integer(),
           required(:height) => pos_integer(),
-          optional(:outline_char) => string(),
-          optional(:fill_char) => string()
+          optional(:outline_char) => String.t(),
+          optional(:fill_char) => String.t()
         }
 
   @type flood_fill :: %{
           required(:start_point) => start_point(),
-          optional(:fill_char) => string()
+          optional(:fill_char) => String.t()
         }
 
   @doc """
@@ -36,7 +35,9 @@ defmodule Canvas.Fields do
 
   """
   def list_fields do
-    Repo.all(Field)
+    Field
+    |> order_by(desc: :inserted_at)
+    |> Repo.all()
   end
 
   @doc """
@@ -200,13 +201,16 @@ defmodule Canvas.Fields do
     Repo.delete(history)
   end
 
+  @spec add_rectangle(field :: Field.t() | any(), rectangle :: rectangle()) ::
+          {:ok, Field.t()} | {:error, term()}
   def add_rectangle(%Field{} = field, rectangle) do
     Repo.transaction(fn ->
       with {:ok, rectangle} <- Drawing.parse(rectangle, :rectangle),
            {:ok, {updated_field, history}} <- Drawing.apply(rectangle, field),
-           {:ok, _} <- update_field(field, Map.take(updated_field, [:body, :height, :width])),
+           updated_field_params = Map.take(updated_field, [:body, :height, :width]),
+           {:ok, update_field} <- update_field(field, updated_field_params),
            {:ok, _} <- create_history(%{changes: history, field_id: field.id}) do
-        field
+        update_field
       else
         {:error, reason} ->
           Repo.rollback(reason)
@@ -214,12 +218,21 @@ defmodule Canvas.Fields do
     end)
   end
 
-  def add_rectangle(_, _), do: {:error, :field_not_found}
+  def add_rectangle(_, _), do: {:error, :invalid_field}
 
-  def add_flood_fill(%Field{} = field, flood_fill) do
+  @spec add_flood_fill(field :: Field.t() | any(), flood_fill :: flood_fill()) ::
+          {:ok, Field.t()} | {:error, term()}
+  def add_flood_fill(%Field{body: body, size_fixed: false} = field, _flood_fill)
+      when map_size(body) == 0,
+      do: {:ok, field}
+
+  def add_flood_fill(
+        %Field{} = field,
+        %{start_point: %{x: x, y: y}, fill_char: fill_char} = flood_fill
+      ) do
     Repo.transaction(fn ->
-      with start_point_char = field.body[{flood_fill.start_point.x, flood_fill.start_point.y}],
-           false <- start_point_char == flood_fill.fill_char,
+      with start_point_char = field.body[{x, y}],
+           false <- start_point_char == fill_char,
            {:ok, flood_fill} <- Drawing.parse(flood_fill, :flood_fill),
            {:ok, {updated_field, history}} <- Drawing.apply(flood_fill, field),
            {:ok, _} <- update_field(field, Map.take(updated_field, [:body, :height, :width])),
@@ -235,107 +248,15 @@ defmodule Canvas.Fields do
     end)
   end
 
-  def add_flood_fill(_, _), do: {:error, :field_not_found}
+  def add_flood_fill(%Field{}, _), do: {:error, :invalid_flood_fill}
+  def add_flood_fill(_, _), do: {:error, :invalid_field}
 
-  @spec
-  defp apply_drawing_flood_fill_to_field(field, drawing, start_point_char) do
-    body = field.body
-
-    apply_drawing_flood_fill_to_field(
-      %{
-        field
-        | body: put_in(body[{drawing.start_point.x, drawing.start_point.y}], drawing.fill_char)
-      },
-      drawing,
-      {drawing.start_point.x, drawing.start_point.y},
-      start_point_char,
-      [
-        {{drawing.start_point.x, drawing.start_point.y},
-         {body[{drawing.start_point.x, drawing.start_point.y}], drawing.fill_char}}
-      ],
-      0,
-      [{drawing.start_point.x, drawing.start_point.y}]
-    )
-  end
-
-  defp apply_drawing_flood_fill_to_field(
-         field,
-         drawing,
-         {x, y},
-         start_point_char,
-         history,
-         depth,
-         depth_history
-       ) do
-    body = field.body
-
-    cond do
-      body[{x, y - 1}] == start_point_char and y - 1 >= 0 and {x, y - 1} not in history ->
-        apply_drawing_flood_fill_to_field(
-          %{field | body: put_in(body[{x, y - 1}], drawing.fill_char)},
-          drawing,
-          {x, y - 1},
-          start_point_char,
-          [{{x, y - 1}, {body[{x, y - 1}], drawing.fill_char}} | history],
-          depth + 1,
-          [{x, y - 1} | depth_history]
-        )
-
-      body[{x + 1, y}] == start_point_char and x + 1 <= field.width and {x + 1, y} not in history ->
-        apply_drawing_flood_fill_to_field(
-          %{field | body: put_in(body[{x + 1, y}], drawing.fill_char)},
-          drawing,
-          {x + 1, y},
-          start_point_char,
-          [{{x + 1, y}, {body[{x + 1, y}], drawing.fill_char}} | history],
-          depth + 1,
-          [{x + 1, y} | depth_history]
-        )
-
-      body[{x, y + 1}] == start_point_char and y + 1 <= field.height and {x, y + 1} not in history ->
-        apply_drawing_flood_fill_to_field(
-          %{field | body: put_in(body[{x, y + 1}], drawing.fill_char)},
-          drawing,
-          {x, y + 1},
-          start_point_char,
-          [{{x, y + 1}, {body[{x, y + 1}], drawing.fill_char}} | history],
-          depth + 1,
-          [{x, y + 1} | depth_history]
-        )
-
-      body[{x - 1, y}] == start_point_char and x - 1 >= 0 and {x - 1, y} not in history ->
-        apply_drawing_flood_fill_to_field(
-          %{field | body: put_in(body[{x - 1, y}], drawing.fill_char)},
-          drawing,
-          {x - 1, y},
-          start_point_char,
-          [{{x - 1, y}, {body[{x - 1, y}], drawing.fill_char}} | history],
-          depth + 1,
-          [{x - 1, y} | depth_history]
-        )
-
-      depth > 1 ->
-        apply_drawing_flood_fill_to_field(
-          field,
-          drawing,
-          Enum.at(depth_history, 1),
-          start_point_char,
-          history,
-          depth - 1,
-          tl(depth_history)
-        )
-
-      true ->
-        {field, Map.new(history)}
-    end
-  end
-
-  def print(field) do
+  def print(%Field{} = field) do
     for y <- 0..(field.height - 1),
         x <- 0..(field.width - 1),
         reduce: "" do
       acc ->
-        acc <> (if x == 0 and y != 0, do: "\n", else: "") <> (field.body[{x, y}] || " ")
+        acc <> if(x == 0 and y != 0, do: "\n", else: "") <> (field.body[{x, y}] || " ")
     end
   end
 end
