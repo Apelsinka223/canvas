@@ -31,7 +31,7 @@ Width and height have type PositiveInt, which mean that they should be > 0.
 
 2. Add a rectangle to the field
 ```graphql
-mutation($field_id: ID!) {
+mutation($field_id: Uuid!) {
     add_rectangle(
         field_id: $field_id, 
         rectangle:{
@@ -49,7 +49,7 @@ mutation($field_id: ID!) {
 
 3. Add flood_fill to the field
 ```graphql
-mutation($field_id: ID!) {
+mutation($field_id: Uuid!) {
     add_flood_fill(
         field_id: $field_id, 
         flood_fill:{
