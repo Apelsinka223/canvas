@@ -1,4 +1,9 @@
 defmodule Canvas.EctoTypes.FieldBody do
+  @moduledoc """
+  Custom type for Field body.
+  """
+  import Canvas.Helpers
+
   def type, do: :map
 
   def equal?(nil, nil), do: true
@@ -36,8 +41,8 @@ defmodule Canvas.EctoTypes.FieldBody do
   def cast(body) when is_map(body) do
     body
     |> Enum.all?(fn
-      {{x, y}, <<_::bytes-size(1)>>} when is_integer(x) and x >= 0 and is_integer(y) and y >= 0 ->
-        true
+      {{x, y}, char} ->
+        is_valid_coordinate?(x, y) and is_valid_char?(char)
 
       _ ->
         false
@@ -53,23 +58,24 @@ defmodule Canvas.EctoTypes.FieldBody do
 
   def cast(body) do
     case decode_body(body) do
-      :error ->
-        :error
-
-      body ->
-        {:ok, body}
+      :error -> :error
+      body -> {:ok, body}
     end
   end
+
+  defp is_valid_coordinate?(x, y) do
+    is_integer(x) and x >= 0 and is_integer(y) and y >= 0
+  end
+
+  defp is_valid_char?(<<_::bytes-size(1)>>), do: true
+  defp is_valid_char?(_), do: false
 
   def load(nil), do: {:ok, nil}
 
   def load(body) do
     case decode_body(body) do
-      :error ->
-        :error
-
-      body ->
-        {:ok, body}
+      :error -> :error
+      body -> {:ok, body}
     end
   end
 
@@ -79,11 +85,8 @@ defmodule Canvas.EctoTypes.FieldBody do
 
   def dump(body) do
     case encode_body(body) do
-      :error ->
-        :error
-
-      body ->
-        {:ok, body}
+      :error -> :error
+      body -> {:ok, body}
     end
   end
 
@@ -91,7 +94,7 @@ defmodule Canvas.EctoTypes.FieldBody do
     string =
       body
       |> Enum.map(fn {{x, y}, char} ->
-        "\"{#{x},#{y}}\": \"#{char || "null"}\""
+        encode_tuple_to_json({x, y}) <> ": " <> encode_nullable_char_to_json(char)
       end)
       |> Enum.join(",")
 
@@ -105,30 +108,31 @@ defmodule Canvas.EctoTypes.FieldBody do
     body
     |> Jason.decode!()
     |> Enum.reduce_while([], fn
-      {coord, <<_::bytes-size(1)>> = char}, acc ->
-        with coord = String.trim_leading(coord, "{"),
-             coord = String.trim_trailing(coord, "}"),
-             [x, y] <- String.split(coord, ","),
-             {x, _} <- Integer.parse(x),
-             {y, _} <- Integer.parse(y) do
-          {:cont, [{{x, y}, decode_char(char)} | acc]}
+      {coordinate, <<_::bytes-size(1)>> = char}, acc ->
+        with {x, y} <- decode_coordinate(coordinate),
+             char = decode_nullable_char_to_json(char) do
+          {:cont, [{{x, y}, char} | acc]}
         else
-          _ ->
-            {:halt, :error}
+          :error -> {:halt, :error}
         end
 
       _, _ ->
         {:halt, :error}
     end)
     |> case do
-      :error ->
-        :error
-
-      list ->
-        Map.new(list)
+      :error -> :error
+      list -> Map.new(list)
     end
   end
 
-  defp decode_char("null"), do: nil
-  defp decode_char(char), do: char
+  defp decode_coordinate(coordinate) do
+    with {x, y} <- decode_json_to_tuple(coordinate),
+         {x, _} <- Integer.parse(x),
+         {y, _} <- Integer.parse(y) do
+      {x, y}
+    else
+      _ ->
+        :error
+    end
+  end
 end

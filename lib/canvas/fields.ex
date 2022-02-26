@@ -1,10 +1,11 @@
 defmodule Canvas.Fields do
   @moduledoc """
   The Fields context.
+  Responsible for canvas related changes.
   """
 
   import Ecto.Query, warn: false
-  alias Canvas.{Repo, Drawing}
+  alias Canvas.{Repo, Shape}
   alias Canvas.Fields.{Field, History}
 
   @type start_point :: %{
@@ -123,7 +124,7 @@ defmodule Canvas.Fields do
       [%History{}, ...]
 
   """
-  def list_historys do
+  def list_histories do
     Repo.all(History)
   end
 
@@ -205,41 +206,17 @@ defmodule Canvas.Fields do
           {:ok, Field.t()} | {:error, term()}
   def add_rectangle(%Field{} = field, rectangle) do
     Repo.transaction(fn ->
-      with {:ok, rectangle} <- Drawing.parse(rectangle, :rectangle),
-           {:ok, {updated_field, history}} <- Drawing.apply(rectangle, field),
-           updated_field_params = Map.take(updated_field, [:body, :height, :width]),
-           {:ok, update_field} <- update_field(field, updated_field_params),
+      with {:ok, {field_to_update, history}} <- Shape.apply(field, rectangle),
+           {:ok, updated_field} <-
+             update_field(field, %{
+               body: field_to_update.body,
+               width: field_to_update.width,
+               height: field_to_update.height
+             }),
            {:ok, _} <- create_history(%{changes: history, field_id: field.id}) do
-        update_field
+        updated_field
       else
-        {:error, reason} ->
-          Repo.rollback(reason)
-      end
-    end)
-  end
-
-  def add_rectangle(_, _), do: {:error, :invalid_field}
-
-  @spec add_flood_fill(field :: Field.t() | any(), flood_fill :: flood_fill()) ::
-          {:ok, Field.t()} | {:error, term()}
-  def add_flood_fill(%Field{body: body, size_fixed: false} = field, _flood_fill)
-      when map_size(body) == 0,
-      do: {:ok, field}
-
-  def add_flood_fill(
-        %Field{} = field,
-        %{start_point: %{x: x, y: y}, fill_char: fill_char} = flood_fill
-      ) do
-    Repo.transaction(fn ->
-      with start_point_char = field.body[{x, y}],
-           false <- start_point_char == fill_char,
-           {:ok, flood_fill} <- Drawing.parse(flood_fill, :flood_fill),
-           {:ok, {updated_field, history}} <- Drawing.apply(flood_fill, field),
-           {:ok, _} <- update_field(field, Map.take(updated_field, [:body, :height, :width])),
-           {:ok, _} <- create_history(%{changes: history, field_id: field.id}) do
-        field
-      else
-        true ->
+        {:ok, field} ->
           field
 
         {:error, reason} ->
@@ -248,15 +225,19 @@ defmodule Canvas.Fields do
     end)
   end
 
-  def add_flood_fill(%Field{}, _), do: {:error, :invalid_flood_fill}
-  def add_flood_fill(_, _), do: {:error, :invalid_field}
+  def add_rectangle(_, _), do: {:error, :invalid_field}
 
   def print(%Field{} = field) do
     for y <- 0..(field.height - 1),
         x <- 0..(field.width - 1),
         reduce: "" do
       acc ->
-        acc <> if(x == 0 and y != 0, do: "\n", else: "") <> (field.body[{x, y}] || " ")
+        acc <> maybe_move_caret(x, y) <> print_coordinate(field, x, y)
     end
   end
+
+  defp maybe_move_caret(0 = _x, y) when y != 0, do: "\n"
+  defp maybe_move_caret(_x, _y), do: ""
+
+  defp print_coordinate(field, x, y), do: field.body[{x, y}] || " "
 end

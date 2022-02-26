@@ -1,4 +1,8 @@
 defmodule Canvas.Fields.Field do
+  @moduledoc """
+  Field schema and struct.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
   alias Canvas.EctoTypes.FieldBody

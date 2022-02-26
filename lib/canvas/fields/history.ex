@@ -1,4 +1,7 @@
 defmodule Canvas.Fields.History do
+  @moduledoc """
+  Field changes history schema and struct.
+  """
   use Ecto.Schema
   alias Canvas.Fields.Field
   alias Canvas.EctoTypes.FieldHistoryChanges

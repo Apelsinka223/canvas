@@ -1,4 +1,5 @@
 defmodule CanvasWeb.Controllers.Print do
+  @moduledoc false
   use CanvasWeb, :controller
 
   alias Canvas.Fields

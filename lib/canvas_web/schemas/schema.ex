@@ -1,4 +1,5 @@
 defmodule CanvasWeb.Schemas.Schema do
+  @moduledoc false
   use Absinthe.Schema
 
   alias CanvasWeb.Resolvers.Fields, as: FieldsResolver
@@ -47,44 +48,6 @@ defmodule CanvasWeb.Schemas.Schema do
 
       resolve &FieldsResolver.add_rectangle/2
     end
-
-    field :add_flood_fill, :field do
-      arg :field_id, non_null(:uuid)
-      arg :flood_fill, non_null(:input_flood_fill)
-
-      resolve &FieldsResolver.add_flood_fill/2
-    end
-  end
-
-  subscription do
-    field :field_updated, :field do
-      arg :field_id, :id
-
-      config fn
-        %{field_id: field_id}, _ ->
-          {:ok, topic: "field_#{field_id}"}
-
-        _, _ ->
-          {:ok, topic: "fields"}
-      end
-
-      trigger [:add_rectangle, :add_flood_fill],
-        topic: fn
-          %{id: field_id} -> ["field_#{field_id}", "fields"]
-          _ -> []
-        end
-    end
-
-    field :field_created, :field do
-      config fn _ ->
-        {:ok, topic: "fields"}
-      end
-
-      trigger [:create_field],
-        topic: fn
-          _ -> ["fields"]
-        end
-    end
   end
 
   object :field do
@@ -111,11 +74,6 @@ defmodule CanvasWeb.Schemas.Schema do
     field :width, non_null(:positive_integer)
     field :height, non_null(:positive_integer)
     field :outline_char, :char
-    field :fill_char, :char
-  end
-
-  input_object :input_flood_fill do
-    field :start_point, non_null(:input_start_point)
     field :fill_char, :char
   end
 

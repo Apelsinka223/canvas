@@ -26,8 +26,9 @@ mutation {
   }
 }
 ```
-You can pass width and height or not. If size params not passed, field would be flexible. Otherwise, field would have fixed size.  
-Width and height have type PositiveInt, which mean that they should be > 0.
+You can pass width and height or not. If size params not passed, field would be flexible. 
+Otherwise, field would have fixed size.  
+Width and height have custom type PositiveInt, which mean that they should be > 0.
 
 2. Add a rectangle to the field
 ```graphql
@@ -46,27 +47,15 @@ mutation($field_id: Uuid!) {
     }
 }
 ```
+If drawing will extend over fixed size of the canvas, only visible part will be applied and
+all the rest will be ignored. 
+If canvas is flexible (was created without specified size), it will extend to include a new drawing.
 
-3. Add flood_fill to the field
-```graphql
-mutation($field_id: Uuid!) {
-    add_flood_fill(
-        field_id: $field_id, 
-        flood_fill:{
-            start_point:{x:0, y:0}, 
-            fill_char:"-"
-        }
-    ) { 
-        id width height body 
-    }
-}
-```
-
-4. Print the field in a browser.  
-Since the field body has a special format that is hard to perceive, you can print field in a browser.
+3. Print the field in a browser.  
+Since the field body has a special format that is hard to perceive, you can print the field in a browser.
    
 Open `http://localhost:4000/print/<field_id>`
 
-5. Check out the version history
+4. Check out the version history
 
 History of the field changes is contained in the `fields_history` table.

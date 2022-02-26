@@ -1,10 +1,9 @@
 defmodule CanvasWeb.Socket do
+  @moduledoc false
   use Phoenix.Socket, log: :debug
 
   use Absinthe.Phoenix.Socket,
     schema: CanvasWeb.Schemas.Public.Schema
-
-  alias Absinthe.Phoenix.Socket
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After

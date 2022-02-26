@@ -46,7 +46,7 @@ defmodule Canvas.MixProject do
       {:absinthe, "~> 1.5"},
       {:absinthe_phoenix, "~> 2.0"},
       {:ex_machina, "~> 2.5", only: :test},
-      {:credo, "~> 1.4.0", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.4.0", only: [:dev, :test], runtime: false}
     ]
   end
 

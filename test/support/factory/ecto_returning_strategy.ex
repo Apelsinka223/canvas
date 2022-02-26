@@ -60,9 +60,7 @@ defmodule Canvas.Factory.EctoReturningStrategy do
         value
 
       _ ->
-        raise "Failed to cast `#{inspect(value)}` of type #{inspect(field_type)} in #{
-                inspect(struct)
-              }."
+        raise "Failed to cast `#{inspect(value)}` of type #{inspect(field_type)} in #{inspect(struct)}."
     end
   end
 

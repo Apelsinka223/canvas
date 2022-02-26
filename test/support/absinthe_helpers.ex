@@ -1,4 +1,8 @@
 defmodule CanvasWeb.AbsintheHelpers do
+  @moduledoc """
+  Helpers for testing GraphQL endpoints.
+  """
+
   def query_skeleton(query, variables \\ %{}, params \\ %{}) do
     Map.merge(
       %{

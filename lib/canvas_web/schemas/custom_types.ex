@@ -1,4 +1,5 @@
 defmodule Canvas.Schemas.CustomTypes do
+  @moduledoc false
   use Absinthe.Schema.Notation
 
   scalar :uuid do

@@ -1,4 +1,9 @@
 defmodule Canvas.EctoTypes.FieldHistoryChanges do
+  @moduledoc """
+  Custom type for Field changes history.
+  """
+  import Canvas.Helpers
+
   def type, do: :map
 
   def equal?(nil, nil), do: true
@@ -8,14 +13,9 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
   def equal?(value1, value2) do
     value1 =
       case Map.keys(value1) do
-        [] ->
-          %{}
-
-        [k | _] when is_binary(k) ->
-          decode_body(value1)
-
-        _ ->
-          value1
+        [] -> %{}
+        [k | _] when is_binary(k) -> decode_body(value1)
+        _ -> value1
       end
 
     value2 =
@@ -36,10 +36,8 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
   def cast(body) when is_map(body) do
     body
     |> Enum.all?(fn
-      {{x, y}, {old_v, new_v}}
-      when is_integer(x) and x >= 0 and is_integer(y) and y >= 0 ->
-        (match?(<<_::bytes-size(1)>>, old_v) or is_nil(old_v)) and
-          (match?(<<_::bytes-size(1)>>, new_v) or is_nil(new_v))
+      {{x, y}, {old_v, new_v}} ->
+        is_valid_coordinate?(x, y) and is_valid_char?(old_v) and is_valid_char?(new_v)
 
       _ ->
         false
@@ -55,23 +53,25 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
 
   def cast(body) do
     case decode_body(body) do
-      :error ->
-        :error
-
-      body ->
-        {:ok, body}
+      :error -> :error
+      body -> {:ok, body}
     end
   end
+
+  defp is_valid_coordinate?(x, y) do
+    is_integer(x) and x >= 0 and is_integer(y) and y >= 0
+  end
+
+  defp is_valid_char?(<<_::bytes-size(1)>>), do: true
+  defp is_valid_char?(nil), do: true
+  defp is_valid_char?(_), do: false
 
   def load(nil), do: {:ok, nil}
 
   def load(body) do
     case decode_body(body) do
-      :error ->
-        :error
-
-      body ->
-        {:ok, body}
+      :error -> :error
+      body -> {:ok, body}
     end
   end
 
@@ -81,11 +81,8 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
 
   def dump(body) do
     case encode_body(body) do
-      :error ->
-        :error
-
-      body ->
-        {:ok, body}
+      :error -> :error
+      body -> {:ok, body}
     end
   end
 
@@ -93,7 +90,9 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
     string =
       body
       |> Enum.map(fn {{x, y}, {old_char, new_char}} ->
-        "\"{#{x},#{y}}\": \"{#{old_char || "null"},#{new_char}}\""
+        encode_tuple_to_json({x, y}) <>
+          ": " <>
+          encode_tuple_to_json({encode_nullable_char_to_json(old_char), new_char})
       end)
       |> Enum.join(",")
 
@@ -103,30 +102,31 @@ defmodule Canvas.EctoTypes.FieldHistoryChanges do
   defp decode_body(body) do
     body
     |> Jason.decode!()
-    |> Enum.reduce_while([], fn {coord, diff}, acc ->
-      with coord = String.trim_leading(coord, "{"),
-           coord = String.trim_trailing(coord, "}"),
-           [x, y] <- String.split(coord, ","),
-           {x, _} <- Integer.parse(x),
-           {y, _} <- Integer.parse(y),
-           diff = String.trim_leading(diff, "{"),
-           diff = String.trim_trailing(diff, "}"),
-           [old_char, new_char] <- String.split(diff, ",") do
-        {:cont, [{{x, y}, {decode_char(old_char), decode_char(new_char)}} | acc]}
+    |> Enum.reduce_while([], fn {coordinate, diff}, acc ->
+      with {x, y} <- decode_coordinate(coordinate),
+           {old_char, new_char} <- decode_json_to_tuple(diff),
+           old_char = decode_nullable_char_to_json(old_char),
+           new_char = decode_nullable_char_to_json(new_char) do
+        {:cont, [{{x, y}, {old_char, new_char}} | acc]}
       else
         _ ->
           {:halt, :error}
       end
     end)
     |> case do
-      :error ->
-        :error
-
-      list ->
-        Map.new(list)
+      :error -> :error
+      list -> Map.new(list)
     end
   end
 
-  defp decode_char("null"), do: nil
-  defp decode_char(char), do: char
+  defp decode_coordinate(coordinate) do
+    with {x, y} <- decode_json_to_tuple(coordinate),
+         {x, _} <- Integer.parse(x),
+         {y, _} <- Integer.parse(y) do
+      {x, y}
+    else
+      _ ->
+        :error
+    end
+  end
 end
